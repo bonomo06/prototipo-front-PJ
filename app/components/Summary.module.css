@@ -1,0 +1,51 @@
+.summary {
+  margin: 20px 24px 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.header {
+  background: var(--red-dark);
+  padding: 10px 16px;
+  font-family: var(--font-bebas), "Bebas Neue", sans-serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: white;
+}
+
+.body {
+  padding: 12px 16px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.label {
+  color: var(--gray);
+}
+
+.value {
+  color: var(--white);
+  font-weight: 600;
+  text-align: right;
+  max-width: 60%;
+}
+
+.price {
+  color: var(--red-bright);
+  font-family: var(--font-bebas), "Bebas Neue", sans-serif;
+  font-size: 18px;
+  letter-spacing: 1px;
+}

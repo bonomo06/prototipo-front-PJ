@@ -1,0 +1,39 @@
+.section {
+  padding: 20px 24px 20px;
+}
+
+.title {
+  font-family: var(--font-bebas), "Bebas Neue", sans-serif;
+  font-size: 18px;
+  letter-spacing: 2px;
+  color: var(--white);
+  margin-bottom: 14px;
+  font-weight: 400;
+}
+
+.title span {
+  color: var(--red-bright);
+}
+
+.textarea {
+  width: 100%;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: var(--white);
+  font-family: var(--font-dm-sans), "DM Sans", sans-serif;
+  font-size: 14px;
+  resize: none;
+  outline: none;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+
+.textarea::placeholder {
+  color: #444;
+}
+
+.textarea:focus {
+  border-color: var(--red);
+}
