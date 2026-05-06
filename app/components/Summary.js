@@ -1,6 +1,6 @@
 import styles from "./Summary.module.css";
 
-export default function Summary({ services, date, time, price, duration }) {
+export default function Summary({ services, barber, date, time, price, duration }) {
   return (
     <div className={styles.summary}>
       <div className={styles.header}>RESUMO</div>
@@ -10,6 +10,10 @@ export default function Summary({ services, date, time, price, duration }) {
           <span className={styles.value}>
             {services.length > 0 ? services.join(", ") : "-"}
           </span>
+        </div>
+        <div className={styles.row}>
+          <span className={styles.label}>Barbeiro</span>
+          <span className={styles.value}>{barber || '-'}</span>
         </div>
         <div className={styles.row}>
           <span className={styles.label}>Data</span>

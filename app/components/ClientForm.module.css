@@ -1,0 +1,63 @@
+.section {
+  padding: 24px 24px 8px;
+}
+
+.title {
+  font-family: var(--font-bebas), 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  letter-spacing: 2px;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+
+.title span {
+  color: var(--red-bright);
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--gray);
+  margin-bottom: 24px;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-light);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.input {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--white);
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  font-size: 15px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+}
+
+.input::placeholder {
+  color: #444;
+}
+
+.input:focus {
+  border-color: var(--red);
+}

@@ -1,223 +1,330 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import styles from "./page.module.css";
 import Header from "./components/Header";
+import StepProgress from "./components/StepProgress";
 import ServicePicker from "./components/ServicePicker";
+import BarberPicker from "./components/BarberPicker";
 import Calendar from "./components/Calendar";
 import TimeSlots from "./components/TimeSlots";
 import Notes from "./components/Notes";
+import ClientForm from "./components/ClientForm";
 import Summary from "./components/Summary";
 
-// =============================================
-// API INTEGRATION (descomentar quando a API estiver pronta)
-// =============================================
-// const API_BASE = "https://sua-api.com/api/v1";
-//
-// async function fetchServices() {
-//   const res = await fetch(`${API_BASE}/services`);
-//   return res.json();
-// }
-//
-// async function fetchAvailableDays(month, year) {
-//   const res = await fetch(`${API_BASE}/availability?month=${month}&year=${year}`);
-//   return res.json();
-// }
-//
-// async function fetchAvailableTimes(date) {
-//   const res = await fetch(`${API_BASE}/availability/${date}/times`);
-//   return res.json();
-// }
-//
-// async function createBooking(data) {
-//   const res = await fetch(`${API_BASE}/bookings`, {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify(data),
-//   });
-//   return res.json();
-// }
-// =============================================
-
-const SERVICES = [
-  { id: 1, name: "Corte Degrade", price: 35, duration: 45, icon: "scissors" },
-  { id: 2, name: "Barba Completa", price: 25, duration: 30, icon: "razor" },
-  { id: 3, name: "Corte + Barba", price: 55, duration: 75, icon: "combo" },
-  { id: 4, name: "Relaxamento", price: 40, duration: 50, icon: "relax" },
-  { id: 5, name: "Coloracao", price: 80, duration: 90, icon: "color" },
-  { id: 6, name: "Corte Infantil", price: 25, duration: 30, icon: "child" },
+const MONTHS = [
+  "Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+  "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro",
 ];
 
-// Dados mock - substituir por dados da API
-const BUSY_DAYS = [3, 7, 8, 14, 15, 21, 22, 28];
+function pad(n) { return String(n).padStart(2, '0'); }
 
-const MOCK_TIMES = [
-  { time: "08:00", available: false },
-  { time: "09:00", available: false },
-  { time: "10:00", available: true },
-  { time: "11:00", available: true },
-  { time: "12:00", available: false },
-  { time: "13:00", available: true },
-  { time: "14:00", available: true },
-  { time: "15:00", available: false },
-  { time: "16:00", available: true },
-  { time: "17:00", available: true },
-  { time: "18:00", available: false },
-  { time: "19:00", available: true },
-];
+// Fluxo: 1-Serviço | 2-Barbeiro | 3-Data | 4-Horário | 5-Dados | 6-Resumo
+const TOTAL_STEPS = 6;
 
 export default function Home() {
-  const [selectedServices, setSelectedServices] = useState([1]);
-  const [selectedDate, setSelectedDate] = useState({ day: 10, month: 2, year: 2026 });
-  const [selectedTime, setSelectedTime] = useState("11:00");
-  const [notes, setNotes] = useState("");
-  const [confirmState, setConfirmState] = useState("idle");
-  const [currentMonth, setCurrentMonth] = useState({ month: 2, year: 2026 });
+  // --- Wizard ---
+  const [step, setStep] = useState(1);
 
-  // =============================================
-  // API INTEGRATION: substituir dados mock
-  // =============================================
-  // const [services, setServices] = useState([]);
-  // const [busyDays, setBusyDays] = useState([]);
-  // const [times, setTimes] = useState([]);
-  //
-  // useEffect(() => {
-  //   fetchServices().then(setServices);
-  // }, []);
-  //
-  // useEffect(() => {
-  //   fetchAvailableDays(currentMonth.month + 1, currentMonth.year)
-  //     .then(data => setBusyDays(data.busyDays));
-  // }, [currentMonth]);
-  //
-  // useEffect(() => {
-  //   if (selectedDate.day) {
-  //     const dateStr = `${selectedDate.year}-${String(selectedDate.month + 1).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}`;
-  //     fetchAvailableTimes(dateStr).then(setTimes);
-  //   }
-  // }, [selectedDate]);
-  // =============================================
+  // --- Dados do agendamento ---
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [selectedBarber, setSelectedBarber]     = useState(null); // {id, name}
+  const [selectedDate, setSelectedDate]         = useState(null); // {day,month,year}
+  const [selectedTime, setSelectedTime]         = useState(null);
+  const [clientName, setClientName]             = useState('');
+  const [clientPhone, setClientPhone]           = useState('');
+  const [notes, setNotes]                       = useState('');
 
-  const toggleService = useCallback((id) => {
-    setSelectedServices((prev) =>
-      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
-    );
+  // --- Dados da API ---
+  const [services, setServices]   = useState([]);
+  const [barbers, setBarbers]     = useState([]);
+  const [busyDays, setBusyDays]   = useState([]);
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return { month: now.getMonth(), year: now.getFullYear() };
+  });
+
+  // --- UI ---
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [loadingBarbers, setLoadingBarbers]   = useState(true);
+  const [loadingDays, setLoadingDays]         = useState(false);
+  const [loadingSlots, setLoadingSlots]       = useState(false);
+  const [confirmState, setConfirmState]       = useState('idle'); // idle|loading|success|error
+  const [errorMsg, setErrorMsg]               = useState('');
+
+  // --- Derivados ---
+  const totalPrice = useMemo(() =>
+    selectedServices.reduce((sum, id) => {
+      const svc = services.find(s => s.id === id);
+      return sum + (svc?.price || 0);
+    }, 0),
+  [selectedServices, services]);
+
+  const totalDuration = useMemo(() =>
+    selectedServices.reduce((sum, id) => {
+      const svc = services.find(s => s.id === id);
+      return sum + (svc?.duration || 0);
+    }, 0),
+  [selectedServices, services]);
+
+  const selectedServiceNames = useMemo(() =>
+    selectedServices.map(id => services.find(s => s.id === id)?.name).filter(Boolean),
+  [selectedServices, services]);
+
+  const formattedDate = selectedDate
+    ? `${selectedDate.day} de ${MONTHS[selectedDate.month]}`
+    : 'Selecione';
+
+  const canAdvance = useMemo(() => {
+    switch (step) {
+      case 1: return selectedServices.length > 0;
+      case 2: return selectedBarber !== null;
+      case 3: return selectedDate !== null;
+      case 4: return selectedTime !== null;
+      case 5: return clientName.trim().length >= 2
+                  && clientPhone.replace(/\D/g, '').length >= 10;
+      default: return false;
+    }
+  }, [step, selectedServices, selectedBarber, selectedDate, selectedTime, clientName, clientPhone]);
+
+  // --- Buscar serviços e barbeiros na montagem ---
+  useEffect(() => {
+    fetch('/api/services')
+      .then(r => r.json())
+      .then(data => { setServices(Array.isArray(data) ? data : []); setLoadingServices(false); })
+      .catch(() => setLoadingServices(false));
+
+    fetch('/api/barbers')
+      .then(r => r.json())
+      .then(data => { setBarbers(Array.isArray(data) ? data : []); setLoadingBarbers(false); })
+      .catch(() => setLoadingBarbers(false));
   }, []);
 
-  const totalPrice = useMemo(() => {
-    return selectedServices.reduce((sum, id) => {
-      const svc = SERVICES.find((s) => s.id === id);
-      return sum + (svc?.price || 0);
-    }, 0);
-  }, [selectedServices]);
+  // --- Buscar dias ocupados ao entrar no passo 3 (data) ou mudar de mês ---
+  useEffect(() => {
+    if (step !== 3 || !selectedBarber) return;
+    setLoadingDays(true);
+    const { month, year } = currentMonth;
+    fetch(`/api/availability?month=${month + 1}&year=${year}&barberId=${selectedBarber.id}`)
+      .then(r => r.json())
+      .then(data => { setBusyDays(data.busyDays || []); setLoadingDays(false); })
+      .catch(() => setLoadingDays(false));
+  }, [step, currentMonth, selectedBarber]);
 
-  const totalDuration = useMemo(() => {
-    return selectedServices.reduce((sum, id) => {
-      const svc = SERVICES.find((s) => s.id === id);
-      return sum + (svc?.duration || 0);
-    }, 0);
-  }, [selectedServices]);
+  // --- Buscar timeslots ao entrar no passo 4 (horário) ---
+  useEffect(() => {
+    if (step !== 4 || !selectedDate || !selectedBarber || totalDuration === 0) return;
+    const { day, month, year } = selectedDate;
+    const dateStr = `${year}-${pad(month + 1)}-${pad(day)}`;
+    setLoadingSlots(true);
+    setSelectedTime(null);
+    fetch(`/api/timeslots?date=${dateStr}&duration=${totalDuration}&barberId=${selectedBarber.id}`)
+      .then(r => r.json())
+      .then(data => { setTimeSlots(data.slots || []); setLoadingSlots(false); })
+      .catch(() => setLoadingSlots(false));
+  }, [step, selectedDate, totalDuration, selectedBarber]);
 
-  const selectedServiceNames = useMemo(() => {
-    return selectedServices
-      .map((id) => SERVICES.find((s) => s.id === id)?.name)
-      .filter(Boolean);
-  }, [selectedServices]);
+  // --- Navegação ---
+  const goNext = useCallback(() => {
+    if (step < TOTAL_STEPS) setStep(s => s + 1);
+  }, [step]);
 
+  const goBack = useCallback(() => {
+    setErrorMsg('');
+    if (step > 1) setStep(s => s - 1);
+  }, [step]);
+
+  // Ao trocar de barbeiro, reseta data e horário (disponibilidade é por barbeiro)
+  const handleSelectBarber = useCallback((barber) => {
+    setSelectedBarber(barber);
+    setSelectedDate(null);
+    setSelectedTime(null);
+    setBusyDays([]);
+  }, []);
+
+  // --- Confirmação ---
   const handleConfirm = async () => {
-    if (selectedServices.length === 0 || !selectedDate.day || !selectedTime) return;
-
-    setConfirmState("loading");
-
-    // =============================================
-    // API INTEGRATION: enviar agendamento
-    // =============================================
-    // try {
-    //   const bookingData = {
-    //     services: selectedServices,
-    //     date: `${selectedDate.year}-${String(selectedDate.month + 1).padStart(2, '0')}-${String(selectedDate.day).padStart(2, '0')}`,
-    //     time: selectedTime,
-    //     notes,
-    //   };
-    //   const result = await createBooking(bookingData);
-    //   if (!result.success) throw new Error(result.message);
-    //   setConfirmState("success");
-    // } catch (err) {
-    //   console.error("Erro ao agendar:", err);
-    //   setConfirmState("idle");
-    //   return;
-    // }
-    // =============================================
-
-    // Mock delay
-    await new Promise((r) => setTimeout(r, 800));
-    setConfirmState("success");
-    setTimeout(() => setConfirmState("idle"), 3000);
+    setConfirmState('loading');
+    setErrorMsg('');
+    try {
+      const { day, month, year } = selectedDate;
+      const dateStr = `${year}-${pad(month + 1)}-${pad(day)}`;
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceIds:    selectedServices,
+          serviceNames:  selectedServiceNames,
+          barberId:      selectedBarber.id,
+          clientName,
+          clientPhone,
+          date:          dateStr,
+          time:          selectedTime,
+          totalDuration,
+          totalPrice,
+          notes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao agendar');
+      setConfirmState('success');
+    } catch (err) {
+      setConfirmState('error');
+      setErrorMsg(err.message);
+    }
   };
 
-  const MONTHS = [
-    "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-  ];
-
-  const formattedDate = selectedDate.day
-    ? `${selectedDate.day} de ${MONTHS[selectedDate.month]}`
-    : "Selecione";
-
-  const canConfirm = selectedServices.length > 0 && selectedDate.day && selectedTime;
+  // --- Posição do track (1/6 por passo) ---
+  const trackStyle = { transform: `translateX(calc(-100% / ${TOTAL_STEPS} * ${step - 1}))` };
 
   return (
     <main className={styles.main}>
-      <div className={styles.container}>
+      <div className={styles.wizardOuter}>
         <Header />
+        <StepProgress current={step} />
 
-        <ServicePicker
-          services={SERVICES}
-          selected={selectedServices}
-          onToggle={toggleService}
-        />
+        <div className={styles.stepsTrack} style={trackStyle}>
 
-        <div className={styles.divider} />
+          {/* Passo 1 — Serviços */}
+          <div className={styles.step}>
+            <div className={styles.stepContent}>
+              {loadingServices
+                ? <div className={styles.loadingBox}><div className={styles.spinner} /><span>Carregando serviços...</span></div>
+                : <ServicePicker
+                    services={services}
+                    selected={selectedServices}
+                    onToggle={id => setSelectedServices(prev =>
+                      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+                    )}
+                  />
+              }
+            </div>
+          </div>
 
-        <Calendar
-          currentMonth={currentMonth}
-          onChangeMonth={setCurrentMonth}
-          selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
-          busyDays={BUSY_DAYS}
-        />
+          {/* Passo 2 — Barbeiro */}
+          <div className={styles.step}>
+            <div className={styles.stepContent}>
+              {loadingBarbers
+                ? <div className={styles.loadingBox}><div className={styles.spinner} /><span>Carregando profissionais...</span></div>
+                : <BarberPicker
+                    barbers={barbers}
+                    selected={selectedBarber}
+                    onSelect={handleSelectBarber}
+                  />
+              }
+            </div>
+          </div>
 
-        <div className={styles.divider} />
+          {/* Passo 3 — Data */}
+          <div className={styles.step}>
+            <div className={styles.stepContent}>
+              {loadingDays
+                ? <div className={styles.loadingBox}><div className={styles.spinner} /><span>Verificando disponibilidade...</span></div>
+                : <Calendar
+                    currentMonth={currentMonth}
+                    onChangeMonth={setCurrentMonth}
+                    selectedDate={selectedDate}
+                    onSelectDate={setSelectedDate}
+                    busyDays={busyDays}
+                  />
+              }
+            </div>
+          </div>
 
-        <TimeSlots
-          times={MOCK_TIMES}
-          selectedTime={selectedTime}
-          onSelectTime={setSelectedTime}
-        />
+          {/* Passo 4 — Horário */}
+          <div className={styles.step}>
+            <div className={styles.stepContent}>
+              {loadingSlots
+                ? <div className={styles.loadingBox}><div className={styles.spinner} /><span>Verificando horários...</span></div>
+                : <TimeSlots
+                    times={timeSlots}
+                    selectedTime={selectedTime}
+                    onSelectTime={setSelectedTime}
+                  />
+              }
+            </div>
+          </div>
 
-        <div className={styles.divider} />
+          {/* Passo 5 — Dados do cliente + Observações */}
+          <div className={styles.step}>
+            <div className={styles.stepContent}>
+              <ClientForm
+                name={clientName}
+                phone={clientPhone}
+                onChangeName={setClientName}
+                onChangePhone={setClientPhone}
+              />
+              <Notes value={notes} onChange={setNotes} />
+            </div>
+          </div>
 
-        <Notes value={notes} onChange={setNotes} />
+          {/* Passo 6 — Resumo + Confirmar */}
+          <div className={styles.step}>
+            <div className={styles.stepContent}>
+              {confirmState === 'success' ? (
+                <div className={styles.successBox}>
+                  <span className={styles.successIcon}>✓</span>
+                  <p className={styles.successTitle}>Agendamento Confirmado!</p>
+                  <p className={styles.successMsg}>
+                    Seu horário foi reservado com sucesso e adicionado ao calendário
+                    de {selectedBarber?.name}. Até lá!
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <Summary
+                    services={selectedServiceNames}
+                    barber={selectedBarber?.name}
+                    date={formattedDate}
+                    time={selectedTime || 'Selecione'}
+                    price={totalPrice}
+                    duration={totalDuration}
+                  />
+                  {errorMsg && <div className={styles.errorBox}>{errorMsg}</div>}
+                  <div className={styles.confirmArea}>
+                    <button
+                      className={`${styles.confirmBtn} ${confirmState === 'success' ? styles.confirmBtnSuccess : ''}`}
+                      onClick={handleConfirm}
+                      disabled={confirmState === 'loading' || confirmState === 'success'}
+                    >
+                      {confirmState === 'loading' ? 'AGENDANDO...' : 'CONFIRMAR AGENDAMENTO'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
 
-        <Summary
-          services={selectedServiceNames}
-          date={formattedDate}
-          time={selectedTime || "Selecione"}
-          price={totalPrice}
-          duration={totalDuration}
-        />
-
-        <div className={styles.ctaWrapper}>
-          <button
-            className={`${styles.ctaBtn} ${confirmState === "success" ? styles.ctaSuccess : ""} ${!canConfirm ? styles.ctaDisabled : ""}`}
-            onClick={handleConfirm}
-            disabled={!canConfirm || confirmState === "loading"}
-          >
-            {confirmState === "loading" && "AGENDANDO..."}
-            {confirmState === "success" && "AGENDADO COM SUCESSO"}
-            {confirmState === "idle" && "CONFIRMAR AGENDAMENTO"}
-          </button>
         </div>
+
+        {/* Barra de navegação — passos 1 a 5 */}
+        {step < TOTAL_STEPS && (
+          <div className={styles.navBar}>
+            <div className={styles.navRow}>
+              {step > 1 && (
+                <button className={styles.btnBack} onClick={goBack}>VOLTAR</button>
+              )}
+              <button
+                className={styles.btnPrimary}
+                onClick={goNext}
+                disabled={!canAdvance}
+              >
+                {step === 5 ? 'VER RESUMO' : 'PRÓXIMO'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Barra de navegação — passo 6 */}
+        {step === TOTAL_STEPS && confirmState !== 'success' && (
+          <div className={styles.navBar}>
+            <button className={styles.btnBack} style={{ width: '100%' }} onClick={goBack}>
+              VOLTAR E EDITAR
+            </button>
+          </div>
+        )}
+
       </div>
     </main>
   );

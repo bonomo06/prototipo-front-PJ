@@ -38,6 +38,7 @@ export default function Calendar({
       const isToday = dateObj.getTime() === today.getTime();
       const isBusy = busyDays.includes(d);
       const isSelected =
+        selectedDate !== null &&
         selectedDate.day === d &&
         selectedDate.month === month &&
         selectedDate.year === year;
@@ -53,10 +54,16 @@ export default function Calendar({
   }, [month, year, busyDays, selectedDate]);
 
   const handlePrev = () => {
+    const today = new Date();
+    const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
+    if (isCurrentMonth) return; // não permite navegar para meses passados
     const m = month === 0 ? 11 : month - 1;
     const y = month === 0 ? year - 1 : year;
     onChangeMonth({ month: m, year: y });
   };
+
+  const today = new Date();
+  const isCurrentMonth = month === today.getMonth() && year === today.getFullYear();
 
   const handleNext = () => {
     const m = month === 11 ? 0 : month + 1;
@@ -75,7 +82,7 @@ export default function Calendar({
       </h2>
 
       <div className={styles.monthNav}>
-        <button className={styles.navBtn} onClick={handlePrev}>
+        <button className={styles.navBtn} onClick={handlePrev} disabled={isCurrentMonth} aria-label="Mês anterior">
           &#8249;
         </button>
         <span className={styles.monthName}>
