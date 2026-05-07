@@ -1,21 +1,13 @@
+import { Scissors, Palette } from "lucide-react";
 import styles from "./ServicePicker.module.css";
 
 const ICON_MAP = {
-  scissors: "/icons/scissors.svg",
-  razor: "/icons/razor.svg",
-  combo: "/icons/combo.svg",
-  relax: "/icons/relax.svg",
-  color: "/icons/color.svg",
-  child: "/icons/child.svg",
-};
-
-const ICON_FALLBACK = {
-  scissors: "\u2702",
-  razor: "\uD83E\uDE92",
-  combo: "\u2702\uFE0F",
-  relax: "\uD83D\uDC86",
-  color: "\uD83C\uDFA8",
-  child: "\uD83D\uDC76",
+  scissors: [Scissors],
+  razor: [Scissors],
+  combo: [Scissors],
+  relax: [Scissors],
+  color: [Scissors, Palette],
+  child: [Scissors],
 };
 
 export default function ServicePicker({ services, selected, onToggle }) {
@@ -27,6 +19,7 @@ export default function ServicePicker({ services, selected, onToggle }) {
       <div className={styles.grid}>
         {services.map((svc) => {
           const isSelected = selected.includes(svc.id);
+          const icons = ICON_MAP[svc.icon] ?? [Scissors];
           return (
             <button
               key={svc.id}
@@ -34,7 +27,11 @@ export default function ServicePicker({ services, selected, onToggle }) {
               onClick={() => onToggle(svc.id)}
             >
               {isSelected && <span className={styles.check}>&#10003;</span>}
-              <span className={styles.icon}>{ICON_FALLBACK[svc.icon]}</span>
+              <span className={styles.icon}>
+                {icons.map((Icon, i) => (
+                  <Icon key={i} size={20} strokeWidth={1.5} />
+                ))}
+              </span>
               <span className={styles.name}>{svc.name}</span>
               <span className={styles.price}>R$ {svc.price}</span>
               <span className={styles.duration}>{svc.duration} min</span>

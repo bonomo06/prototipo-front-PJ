@@ -62,8 +62,15 @@
 }
 
 .icon {
-  font-size: 20px;
-  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 4px;
+  color: var(--gray);
+}
+
+.selected .icon {
+  color: var(--red-bright);
 }
 
 .name {
