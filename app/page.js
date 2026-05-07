@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 import Header from "./components/Header";
+import LandingScreen from "./components/LandingScreen";
 import StepProgress from "./components/StepProgress";
 import ServicePicker from "./components/ServicePicker";
 import BarberPicker from "./components/BarberPicker";
@@ -23,8 +25,11 @@ function pad(n) { return String(n).padStart(2, '0'); }
 const TOTAL_STEPS = 6;
 
 export default function Home() {
+  const router = useRouter();
+  const hasAppliedParams = useRef(false);
+
   // --- Wizard ---
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
 
   // --- Dados do agendamento ---
   const [selectedServices, setSelectedServices] = useState([]);
@@ -87,6 +92,24 @@ export default function Home() {
       default: return false;
     }
   }, [step, selectedServices, selectedBarber, selectedDate, selectedTime, clientName, clientPhone]);
+
+  // --- Pré-selecionar serviços/barbeiro vindos do reagendamento (?services=1,2&barber=1) ---
+  useEffect(() => {
+    if (loadingServices || loadingBarbers || hasAppliedParams.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const svcParam    = params.get('services');
+    const barberParam = params.get('barber');
+    if (!svcParam && !barberParam) return;
+    hasAppliedParams.current = true;
+    if (svcParam) {
+      const ids = svcParam.split(',').map(Number).filter(id => services.some(s => s.id === id));
+      if (ids.length) setSelectedServices(ids);
+    }
+    if (barberParam) {
+      const barber = barbers.find(b => b.id === parseInt(barberParam, 10));
+      if (barber) setSelectedBarber({ id: barber.id, name: barber.name });
+    }
+  }, [loadingServices, loadingBarbers, services, barbers]);
 
   // --- Buscar serviços e barbeiros na montagem ---
   useEffect(() => {
@@ -174,6 +197,16 @@ export default function Home() {
       setErrorMsg(err.message);
     }
   };
+
+  // --- Tela de boas-vindas ---
+  if (step === 0) {
+    return (
+      <LandingScreen
+        onAgendar={() => setStep(1)}
+        onCancelar={() => router.push('/cancelar')}
+      />
+    );
+  }
 
   // --- Posição do track (1/6 por passo) ---
   const trackStyle = { transform: `translateX(calc(-100% / ${TOTAL_STEPS} * ${step - 1}))` };

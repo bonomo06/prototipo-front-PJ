@@ -20,15 +20,22 @@ export async function GET(request) {
     .eq('id', barberId)
     .single();
 
+  // Calcular nowMinutes quando a data solicitada é hoje (fuso Brasil UTC-3)
+  const nowUTC  = new Date();
+  const nowBR   = new Date(nowUTC.getTime() - 3 * 60 * 60 * 1000);
+  const todayBR = nowBR.toISOString().slice(0, 10);
+  const nowMinutes = date === todayBR
+    ? nowBR.getUTCHours() * 60 + nowBR.getUTCMinutes()
+    : null;
+
   if (barberErr || !barber?.google_calendar_id) {
-    // Calendário não configurado — todos os slots aparecem como disponíveis
-    const slots = buildTimeSlots(duration, []);
+    const slots = buildTimeSlots(duration, [], nowMinutes);
     return NextResponse.json({ slots });
   }
 
   try {
     const events = await getEventsForDay(date, barber.google_calendar_id);
-    const slots  = buildTimeSlots(duration, events);
+    const slots  = buildTimeSlots(duration, events, nowMinutes);
     return NextResponse.json({ slots });
   } catch (err) {
     console.error('[timeslots]', err);
