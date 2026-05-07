@@ -156,7 +156,7 @@ export default function Home() {
 
   const goBack = useCallback(() => {
     setErrorMsg('');
-    if (step > 1) setStep(s => s - 1);
+    if (step > 0) setStep(s => s - 1);
   }, [step]);
 
   // Ao trocar de barbeiro, reseta data e horário (disponibilidade é por barbeiro)
@@ -350,9 +350,7 @@ export default function Home() {
         {step < TOTAL_STEPS && (
           <div className={styles.navBar}>
             <div className={styles.navRow}>
-              {step > 1 && (
-                <button className={styles.btnBack} onClick={goBack}>VOLTAR</button>
-              )}
+              <button className={styles.btnBack} onClick={goBack}>VOLTAR</button>
               <button
                 className={styles.btnPrimary}
                 onClick={goNext}
