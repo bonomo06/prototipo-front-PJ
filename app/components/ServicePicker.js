@@ -2,12 +2,12 @@ import { Scissors, Palette } from "lucide-react";
 import styles from "./ServicePicker.module.css";
 
 const ICON_MAP = {
-  scissors: [Scissors],
-  razor: [Scissors],
-  combo: [Scissors],
-  relax: [Scissors],
-  color: [Scissors, Palette],
-  child: [Scissors],
+  scissors: Scissors,
+  razor: Scissors,
+  combo: Scissors,
+  relax: Scissors,
+  color: Palette,
+  child: Scissors,
 };
 
 export default function ServicePicker({ services, selected, onToggle }) {
@@ -19,7 +19,7 @@ export default function ServicePicker({ services, selected, onToggle }) {
       <div className={styles.grid}>
         {services.map((svc) => {
           const isSelected = selected.includes(svc.id);
-          const icons = ICON_MAP[svc.icon] ?? [Scissors];
+          const Icon = ICON_MAP[svc.icon] ?? Scissors;
           return (
             <button
               key={svc.id}
@@ -28,9 +28,7 @@ export default function ServicePicker({ services, selected, onToggle }) {
             >
               {isSelected && <span className={styles.check}>&#10003;</span>}
               <span className={styles.icon}>
-                {icons.map((Icon, i) => (
-                  <Icon key={i} size={20} strokeWidth={1.5} />
-                ))}
+                <Icon size={20} strokeWidth={1.5} />
               </span>
               <span className={styles.name}>{svc.name}</span>
               <span className={styles.price}>R$ {svc.price}</span>
