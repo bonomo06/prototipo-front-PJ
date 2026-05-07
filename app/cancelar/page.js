@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatPhone } from '@/lib/phone';
 import styles from './cancelar.module.css';
 
 function formatDate(dateStr) {
@@ -130,7 +131,8 @@ export default function CancelarPage() {
           type="tel"
           placeholder="(11) 99999-9999"
           value={phone}
-          onChange={e => setPhone(e.target.value)}
+          onChange={e => setPhone(formatPhone(e.target.value))}
+          inputMode="numeric"
         />
         <button className={styles.btn} type="submit" disabled={loading || !phone.trim()}>
           {loading ? 'Buscando...' : 'Buscar agendamentos'}
@@ -156,6 +158,11 @@ export default function CancelarPage() {
                   <p className={styles.price}>R$ {b.total_price}</p>
                 </div>
                 <p className={styles.services}>{b.service_names.join(' + ')}</p>
+                {b.notes && (
+                  <p className={styles.notes}>
+                    <strong>Obs:</strong> {b.notes}
+                  </p>
+                )}
                 <div className={styles.cardActions}>
                   <button
                     className={styles.btnCancel}

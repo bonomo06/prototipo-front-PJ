@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { createCalendarEvent, getEventsForDay } from '@/lib/google-calendar';
 import { buildTimeSlots } from '@/lib/time-slots';
+import { normalizePhone } from '@/lib/phone';
 import { NextResponse } from 'next/server';
 
 function pad(n) { return String(n).padStart(2, '0'); }
@@ -16,10 +17,12 @@ export async function GET(request) {
   const nowBR   = new Date(nowUTC.getTime() - 3 * 60 * 60 * 1000);
   const todayBR = nowBR.toISOString().slice(0, 10);
 
-  const { data, error } = await supabaseAdmin
+  const phoneDigits = normalizePhone(phone);
+
+  // Filtrar por dígitos do telefone (tolerante a formatos diferentes)
+  const { data: allActive, error } = await supabaseAdmin
     .from('bookings')
-    .select('id, booking_date, booking_time, total_price, total_duration, service_ids, notes, barber_id, barbers(name)')
-    .eq('client_phone', phone)
+    .select('id, booking_date, booking_time, total_price, total_duration, service_ids, notes, barber_id, client_phone, barbers(name)')
     .neq('status', 'cancelled')
     .gte('booking_date', todayBR)
     .order('booking_date', { ascending: true });
@@ -28,7 +31,9 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Erro ao buscar agendamentos' }, { status: 500 });
   }
 
-  const serviceIds = [...new Set((data || []).flatMap(b => b.service_ids))];
+  const data = (allActive || []).filter(b => normalizePhone(b.client_phone) === phoneDigits);
+
+  const serviceIds = [...new Set(data.flatMap(b => b.service_ids))];
   let servicesMap = {};
   if (serviceIds.length) {
     const { data: services } = await supabaseAdmin

@@ -57,6 +57,7 @@ export default function Home() {
   const [loadingSlots, setLoadingSlots]       = useState(false);
   const [confirmState, setConfirmState]       = useState('idle'); // idle|loading|success|error
   const [errorMsg, setErrorMsg]               = useState('');
+  const [bookingId, setBookingId]             = useState(null);
 
   // --- Derivados ---
   const totalPrice = useMemo(() =>
@@ -191,6 +192,7 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao agendar');
+      setBookingId(data.bookingId);
       setConfirmState('success');
     } catch (err) {
       setConfirmState('error');
@@ -303,6 +305,19 @@ export default function Home() {
                     Seu horário foi reservado com sucesso e adicionado ao calendário
                     de {selectedBarber?.name}. Até lá!
                   </p>
+                  {bookingId && (
+                    <button
+                      className={styles.btnPrimary}
+                      style={{ marginTop: 12, width: '100%', maxWidth: 320 }}
+                      onClick={() =>
+                        router.push(
+                          `/agendamento/${bookingId}?phone=${encodeURIComponent(clientPhone)}`
+                        )
+                      }
+                    >
+                      VER MEU AGENDAMENTO
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>

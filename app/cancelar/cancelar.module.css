@@ -148,6 +148,18 @@
   color: var(--white-dim);
 }
 
+.notes {
+  font-size: 13px;
+  color: var(--gray-light);
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.notes strong {
+  font-style: normal;
+  color: var(--white-dim);
+}
+
 .price {
   font-size: 15px;
   font-weight: 600;

@@ -1,9 +1,59 @@
 import { supabaseAdmin } from '@/lib/supabase';
 import { deleteCalendarEvent } from '@/lib/google-calendar';
+import { normalizePhone } from '@/lib/phone';
 import { NextResponse } from 'next/server';
 
+export async function GET(request, { params }) {
+  const { id } = await params;
+  const { searchParams } = new URL(request.url);
+  const phone = searchParams.get('phone');
+
+  if (!phone) {
+    return NextResponse.json({ error: 'phone é obrigatório' }, { status: 400 });
+  }
+
+  const { data: booking, error } = await supabaseAdmin
+    .from('bookings')
+    .select('id, booking_date, booking_time, total_price, total_duration, service_ids, notes, status, client_phone, client_name, barber_id, barbers(name)')
+    .eq('id', id)
+    .single();
+
+  if (error || !booking) {
+    return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 });
+  }
+
+  if (normalizePhone(booking.client_phone) !== normalizePhone(phone)) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+  }
+
+  let serviceNames = [];
+  if (booking.service_ids?.length) {
+    const { data: services } = await supabaseAdmin
+      .from('services')
+      .select('id, name')
+      .in('id', booking.service_ids);
+    const map = Object.fromEntries((services || []).map(s => [s.id, s.name]));
+    serviceNames = booking.service_ids.map(sid => map[sid] || 'Serviço');
+  }
+
+  return NextResponse.json({
+    booking: {
+      id: booking.id,
+      booking_date: booking.booking_date,
+      booking_time: booking.booking_time,
+      total_price: booking.total_price,
+      total_duration: booking.total_duration,
+      notes: booking.notes,
+      status: booking.status,
+      client_name: booking.client_name,
+      barber_name: booking.barbers?.name,
+      service_names: serviceNames,
+    },
+  });
+}
+
 export async function DELETE(request, { params }) {
-  const { id } = params;
+  const { id } = await params;
 
   let body;
   try {
@@ -27,7 +77,7 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: 'Agendamento não encontrado' }, { status: 404 });
   }
 
-  if (booking.client_phone !== phone) {
+  if (normalizePhone(booking.client_phone) !== normalizePhone(phone)) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
   }
 
@@ -35,7 +85,7 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ error: 'Agendamento já cancelado' }, { status: 400 });
   }
 
-  // Remover evento do Google Calendar (não bloqueia cancelamento se falhar)
+  // Remover evento do Google Calendar (não bloqueia se já foi apagado lá)
   if (booking.google_event_id && booking.barber_id) {
     try {
       const { data: barber } = await supabaseAdmin
