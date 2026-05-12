@@ -262,6 +262,7 @@ export default function Home() {
                     selectedDate={selectedDate}
                     onSelectDate={setSelectedDate}
                     busyDays={busyDays}
+                    totalDuration={totalDuration}
                   />
               }
             </div>

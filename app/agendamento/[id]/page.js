@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import styles from './agendamento.module.css';
 
+const BARBERSHOP_ADDRESS = 'R. São Lourenço, 282 - Jd. Bom Retiro, Salto - SP';
+const MAPS_QUERY = encodeURIComponent(BARBERSHOP_ADDRESS);
+const MAPS_EMBED = `https://www.google.com/maps?q=${MAPS_QUERY}&output=embed`;
+const MAPS_LINK  = `https://www.google.com/maps/dir/?api=1&destination=${MAPS_QUERY}`;
+
 function formatDate(dateStr) {
   const [y, m, d] = dateStr.split('-');
   return `${d}/${m}/${y}`;
@@ -167,6 +172,28 @@ export default function AgendamentoPage() {
         <div className={styles.totalRow}>
           <span className={styles.totalLabel}>Total</span>
           <span className={styles.totalPrice}>R$ {booking.total_price}</span>
+        </div>
+
+        <div className={styles.divider} />
+
+        <div className={styles.locationBlock}>
+          <span className={styles.rowLabel}>Localização</span>
+          <p className={styles.address}>{BARBERSHOP_ADDRESS}</p>
+          <iframe
+            className={styles.mapFrame}
+            src={MAPS_EMBED}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title="Mapa da barbearia"
+          />
+          <a
+            className={styles.btnMaps}
+            href={MAPS_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Como chegar (Google Maps)
+          </a>
         </div>
 
         {!isCancelled && (

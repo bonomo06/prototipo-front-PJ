@@ -124,6 +124,42 @@
   color: var(--red-bright);
 }
 
+.locationBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.address {
+  font-size: 14px;
+  color: var(--white);
+  line-height: 1.5;
+}
+
+.mapFrame {
+  width: 100%;
+  height: 200px;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  background: var(--card);
+}
+
+.btnMaps {
+  background: var(--red);
+  border: none;
+  border-radius: 10px;
+  color: var(--white);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 12px 14px;
+  text-align: center;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.btnMaps:hover { background: var(--red-bright); }
+
 .actions {
   display: flex;
   flex-direction: column;

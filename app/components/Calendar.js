@@ -10,12 +10,15 @@ const MONTHS = [
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 
+const WORK_END_MIN = 20 * 60; // 20:00 — fim do expediente
+
 export default function Calendar({
   currentMonth,
   onChangeMonth,
   selectedDate,
   onSelectDate,
   busyDays,
+  totalDuration,
 }) {
   const { month, year } = currentMonth;
 
@@ -24,6 +27,11 @@ export default function Calendar({
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    const lastStartMin = WORK_END_MIN - (totalDuration || 30);
+    const nowUTC = new Date();
+    const nowBR  = new Date(nowUTC.getTime() - 3 * 60 * 60 * 1000);
+    const nowMinBR = nowBR.getUTCHours() * 60 + nowBR.getUTCMinutes();
 
     const cells = [];
 
@@ -36,6 +44,7 @@ export default function Calendar({
       const isPast = dateObj < today;
       const isSunday = dateObj.getDay() === 0;
       const isToday = dateObj.getTime() === today.getTime();
+      const isAfterHours = isToday && nowMinBR > lastStartMin;
       const isBusy = busyDays.includes(d);
       const isSelected =
         selectedDate !== null &&
@@ -44,14 +53,14 @@ export default function Calendar({
         selectedDate.year === year;
 
       let type = "free";
-      if (isPast || isSunday) type = "past";
+      if (isPast || isSunday || isAfterHours) type = "past";
       else if (isBusy) type = "busy";
 
       cells.push({ type, day: d, isToday, isSelected, key: `d${d}` });
     }
 
     return cells;
-  }, [month, year, busyDays, selectedDate]);
+  }, [month, year, busyDays, selectedDate, totalDuration]);
 
   const handlePrev = () => {
     const today = new Date();
